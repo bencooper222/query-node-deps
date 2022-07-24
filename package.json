@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@yarnpkg/lockfile": "^1.1.0",
+    "pino": "^8.3.0"
+  }
+}
