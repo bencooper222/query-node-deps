@@ -63,12 +63,6 @@ func main() {
 		},
 	})
 
-	// pgclient.Create(&db.Repository{
-	// 	git_svc: "gh",
-	// 	org:     "bencooper222",
-	// 	repo:    "hibp-bot",
-	// })
-
 	if err = m.Migrate(); err != nil {
 		log.Fatalf("Could not migrate: %v", err)
 	}
