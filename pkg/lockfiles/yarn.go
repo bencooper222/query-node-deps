@@ -2,13 +2,15 @@ package yarn
 
 import (
 	"encoding/json"
+	"log"
+	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/bencooper222/query-node-deps/pkg/util"
+	"github.com/google/uuid"
 )
 
-func GetParsedYarnLockfile(loc string) []Package {
+func GetParsedYarnLockfileFromLocalFile(loc string) []Package {
 	arg := "node"
 	file := "./pkg/lockfiles/yarn/index.mjs"
 
@@ -24,15 +26,28 @@ func GetParsedYarnLockfile(loc string) []Package {
 	return convertRawYarnLockfileToFilteredFormat(parsedJson)
 }
 
+func GetParsedYarnLockfileFromAlreadyStringifiedLockfile(contents string) []Package {
+	if err := os.MkdirAll("tmp", os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+
+	genUuid := uuid.New().String()
+	f, _ := os.Create("tmp/" + genUuid)
+	defer f.Close()
+
+	f.WriteString(contents)
+	f.Sync()
+
+	return GetParsedYarnLockfileFromLocalFile("tmp/" + genUuid)
+}
+
 func convertRawYarnLockfileToFilteredFormat(rawYarnLockfile JsonSchema) []Package {
 	obj := rawYarnLockfile.Object
 
 	var rtn []Package
 	for nameVersionSpec, info := range obj {
-		sections := strings.Split(nameVersionSpec, "@")
-
-		name := sections[0]
-		versionSpec := sections[1]
+		// deals with yarn spec lines that look like @thing/package@1.0.0
+		name, versionSpec := util.SplitOnLastAppearanceOfDelimiter(nameVersionSpec, "@")
 
 		rtn = append(rtn, Package{
 			Name:              name,

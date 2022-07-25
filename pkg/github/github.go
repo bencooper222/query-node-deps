@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/bencooper222/query-node-deps/pkg/util"
 	gh "github.com/google/go-github/v45/github"
 )
 
@@ -56,5 +57,7 @@ func GetLatestCommit(client gh.Client, org string, repo string, branch *string) 
 		},
 	})
 
-	return *refData[0], err
+	util.CheckErr(err)
+
+	return *refData[0], nil
 }

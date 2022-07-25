@@ -21,6 +21,9 @@ type Dependency struct {
 	Fully_qualified_git_slug string // implicit foreign key because I can't figure out how to get the below to work
 	// Repository               Repository `gorm:"foreignKey:Fully_qualified_git_slug"`
 
+	Sha string
+	// Commit Commit `gorm:"foreignKey:Sha"` ditto
+
 	Source                  string // PACKAGE_JSON or YARN_LOCK, not bothering with dealing with golang's shitty enum workarounds
 	Relative_repo_file_path string // format: /x.a is a top-level file in the repo called "x.a"
 	Name                    string
