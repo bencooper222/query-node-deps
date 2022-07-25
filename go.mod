@@ -2,9 +2,14 @@ module github.com/bencooper222/query-node-deps
 
 go 1.18
 
-require github.com/google/go-github/v45 v45.2.0
+require (
+	github.com/google/go-github/v45 v45.2.0
+	gorm.io/driver/postgres v1.3.8
+	gorm.io/gorm v1.23.8
+)
 
 require (
+	github.com/go-gormigrate/gormigrate/v2 v2.0.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.12.1 // indirect
@@ -18,6 +23,4 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/text v0.3.7 // indirect
-	gorm.io/driver/postgres v1.3.8 // indirect
-	gorm.io/gorm v1.23.8 // indirect
 )
