@@ -87,11 +87,19 @@ func convertRawYarnLockfileToFilteredFormat(rawYarnLockfile YarnLockJsonSchema) 
 func convertRawYarnBerryLockfileToFilteredFormat(rawYarnLockfile map[string]interface{}) []Package {
 	var rtn []Package
 	for nameVersionSpec, info := range rawYarnLockfile {
-		// deals with yarn spec lines that look like @thing/package@npm:1.0.0
+		if nameVersionSpec == "__metadata" {
+			continue
+		}
+
+		// Thisdeals with yarn spec lines that look like @thing/package@npm:1.0.0
 		// TODO: this will fail for resolve@patch:resolve@1.1.7#~builtin<compat/resolve>
 		name, versionSpec, matched := strings.Cut(nameVersionSpec, "@npm:")
 		if !matched {
-			log.Fatalf("could not parse name and version spec from %s", nameVersionSpec)
+			log.Printf("could not parse name and version spec from '%s', continuing with a mangled spec", nameVersionSpec)
+			name, versionSpec, matched = strings.Cut(nameVersionSpec, "@")
+			if !matched {
+				log.Fatalf("could not even find a @ in this, aborting")
+			}
 		}
 
 		rtn = append(rtn, Package{
