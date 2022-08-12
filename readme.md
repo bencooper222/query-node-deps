@@ -28,7 +28,7 @@ go run cmd/parseall/main.go
 This will attempt populate the db with the parsed lockfile and package.json info. Then you can connect to the dockerized postgres to query around.
 
 ```
-psql -U postgres -d postgres -h localhost -p 5432
+psql -U postgres -d postgres -h localhost -p 5432 #password=password
 ```
 
 ## Queries
