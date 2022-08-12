@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bencooper222/query-node-deps/pkg/db/types"
@@ -12,16 +13,50 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func ProcessLockfileForRepoLatestCommit(ghClient github.Client, db gorm.DB, org string, repo string) error {
-	gitSlug := "gh/" + org + "/" + repo
-
-	log.Println("Processing", gitSlug)
-
+func ProcessLockAndPackageForLatestCommit(ghClient github.Client, db gorm.DB, org string, repo string) error {
 	latestCommit, err := gh.GetLatestCommit(ghClient, org, repo, nil)
+	if err != nil {
+		return fmt.Errorf("error getting latest commit: %v", err)
+	}
+	err = ProcessLockfileForRepoLatestCommit(ghClient, db, org, repo, *latestCommit)
+	if err != nil {
+		return fmt.Errorf("error processing lockfile: %v", err)
+	}
+	err = ProcessPackageJSONForRepoLatestCommit(ghClient, db, org, repo, *latestCommit)
+	if err != nil {
+		return fmt.Errorf("error processing package.json: %v", err)
+	}
+	return nil
+}
+
+func ProcessPackageJSONForRepoLatestCommit(ghClient github.Client, db gorm.DB, org string, repo string, latestCommit github.RepositoryCommit) error {
+	gitSlug := "gh/" + org + "/" + repo
+	pjson, err := gh.GetStringifiedFileContents(ghClient, org, repo, "package.json", latestCommit.SHA)
 	if err != nil {
 		return err
 	}
+	deps := yarn.GetPackageJSONDependencies(pjson.Contents)
+	packageDeps := []types.Dependency{}
+	for key, value := range deps {
+		packageDeps = append(packageDeps, types.Dependency{
+			Fully_qualified_git_slug: gitSlug,
+			Source:                   "PACKAGE_JSON",
+			Relative_repo_file_path:  "/package.json",
+			Name:                     key,
+			Semver_version_spec:      value,
+			Resolved_version:         types.Semver("0.0.0"),
+			Sha:                      *latestCommit.SHA,
+		})
+	}
+	db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(&packageDeps).Error
+		return err
+	})
+	return nil
+}
 
+func ProcessLockfileForRepoLatestCommit(ghClient github.Client, db gorm.DB, org string, repo string, latestCommit github.RepositoryCommit) error {
+	gitSlug := "gh/" + org + "/" + repo
 	lockfileContents, err := gh.GetStringifiedFileContents(ghClient, org, repo, "yarn.lock", latestCommit.SHA)
 	if err != nil {
 		return err
@@ -40,6 +75,12 @@ func ProcessLockfileForRepoLatestCommit(ghClient github.Client, db gorm.DB, org 
 			Sha:                      *latestCommit.SHA,
 		}
 	})
+	if len(mappedYarnDependencies) == 0 {
+		log.Printf("no dependencies found in yarn.lock for %s/%s", org, repo)
+		return nil
+	} else {
+		log.Printf("found %d dependencies in yarn.lock for %s/%s", len(mappedYarnDependencies), org, repo)
+	}
 
 	db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&types.Repository{
@@ -50,7 +91,7 @@ func ProcessLockfileForRepoLatestCommit(ghClient github.Client, db gorm.DB, org 
 			return err
 		}
 
-		log.Println(latestCommit.Commit.Committer.Date)
+		// log.Println(latestCommit.Commit.Committer.Date)
 		if err := tx.Create(&types.Commit{
 			Fully_qualified_git_slug: gitSlug,
 			Sha:                      *latestCommit.SHA,
@@ -66,8 +107,6 @@ func ProcessLockfileForRepoLatestCommit(ghClient github.Client, db gorm.DB, org 
 
 		return nil
 	})
-
-	log.Println("Finished", gitSlug)
 	return nil
 
 }
